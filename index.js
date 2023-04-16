@@ -1,12 +1,12 @@
 import { OrbitControls } from '//cdn.skypack.dev/three@0.130.1/examples/jsm/controls/OrbitControls.js';
 import * as THREE from '//cdn.skypack.dev/three@0.130.1/build/three.module.js';
-import { Water, WaterSimulation, Caustics } from './l_system_copy_paste/js/water.js';
-import { Coin } from './l_system_copy_paste/js/coin.js';
-import { LSystem } from './l_system_copy_paste/js/lsystem.js';
-import { GUI } from './l_system_copy_paste/js/dat.gui.module.js';
+import { Water, WaterSimulation, Caustics } from './js/water.js';
+import { Coin } from './js/coin.js';
+import { LSystem } from './js/lsystem.js';
+import { GUI } from './js/dat.gui.module.js';
 import { OutlineEffect } from '//cdn.skypack.dev/three@0.130.1/examples/jsm/effects/OutlineEffect.js';
-import {EffectComposer} from '//cdn.skypack.dev/three@0.130.1/examples/jsm/postprocessing/EffectComposer.js';
-import {RenderPass} from '//cdn.skypack.dev/three@0.130.1/examples/jsm/postprocessing/RenderPass.js';
+import { EffectComposer } from '//cdn.skypack.dev/three@0.130.1/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '//cdn.skypack.dev/three@0.130.1/examples/jsm/postprocessing/RenderPass.js';
 import { OBJLoader } from '//cdn.skypack.dev/three@0.130.1/examples/jsm/loaders/OBJLoader.js';
 import { FBXLoader } from '//cdn.skypack.dev/three@0.130.1/examples/jsm/loaders/FBXLoader.js';
 
@@ -32,6 +32,21 @@ let ruleMap14 = {
 let ruleMap13 = {
   'R': "F[-^R][+R]FR",
   'F': "FF"
+}
+
+let ruleMapComplex = {
+  'F': 'Y[++++++MF][-----NF][<<<<<OF][>>>>>PF]',
+  'M': 'Z-M',
+  'N': 'Z+N',
+  'O': 'Z>O',
+  'P': 'Z<P',
+  'Y': 'Z-ZY+',
+  'Z': 'ZFF'
+}
+
+let ruleMap1 = {
+  'X': '^FR>>R>>>>>R',
+  'R': '[^^F>>>>>>X]'
 }
 
 let system = new LSystem(ruleMap14, "R");
@@ -112,9 +127,9 @@ async function waterInit() {
 // gl.getExtension('OES_standard_derivatives');
 
   
-  composer = new EffectComposer( renderer );
-  const renderPass = new RenderPass( scene, camera );
-  composer.addPass( renderPass );
+  composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
 
 
   outlineEffect = new OutlineEffect(renderer, {
@@ -191,10 +206,10 @@ async function waterInit() {
   plantScene.add(ground);
 
   const sunGeo = new THREE.SphereGeometry(100, 32, 16);
-  const sunMat = new THREE.MeshBasicMaterial({ color: 0x000000 , side: THREE.BackSide});
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
   const sunObj = new THREE.Group();
-  const noiseText2 = new THREE.TextureLoader().load( 'img/noise2.jpeg' );
-  const sunMat2 = new THREE.MeshBasicMaterial( { color: 0xff0000, map: noiseText2 , side: THREE.FrontSide} )
+  const noiseText2 = new THREE.TextureLoader().load('img/noise2.jpeg');
+  const sunMat2 = new THREE.MeshBasicMaterial({ color: 0xff0000, map: noiseText2, side: THREE.FrontSide })
   const sun = new THREE.Mesh(sunGeo, sunMat2);
   const sunOutline = new THREE.Mesh(sunGeo, sunMat);
   sunOutline.scale.set(1.03, 1.03, 1.03);
@@ -206,40 +221,42 @@ async function waterInit() {
 
   const fbxLoader = new FBXLoader();
 
-  const rockGroup = new THREE.Group();
+
+
 
   fbxLoader.load(
     // resource URL
     'models/rockring.fbx',
     function (object) {
+      const rockGroup = new THREE.Group();
       object.traverse(function (child) {
 
         if (child.isMesh) {
-          child.material = new THREE.MeshToonMaterial({ color: 0x969c8c, side: THREE.FrontSide});
-          let rockOutlineMat = new THREE.MeshLambertMaterial({ color: 0x000000 , side: THREE.BackSide}); 
+
+          child.material = new THREE.MeshToonMaterial({ color: 0x71756b, side: THREE.FrontSide });
+          let rockOutlineMat = new THREE.MeshLambertMaterial({ color: 0x000000, side: THREE.BackSide });
           rockOutlineMat.onBeforeCompile = (shader) => {
             const token = '#include <begin_vertex>'
             const customTransform = `
                 vec3 transformed = position + objectNormal*0.4;
             `
-            shader.vertexShader = 
-                shader.vertexShader.replace(token,customTransform)
-        }
-          let rockOutline = new THREE.Mesh(child.geometry, rockOutlineMat);
-          // rockOutline.scale.set(1.03, 1.03, 1.03);
+            shader.vertexShader =
+              shader.vertexShader.replace(token, customTransform)
+          }
+          let rockOutline = child.clone();
+          rockOutline.material = rockOutlineMat;
+          const scaleFact = 1.13;
+          rockOutline.scale.set(scaleFact * child.scale.x, scaleFact * child.scale.y, scaleFact * child.scale.z);
           rockGroup.add(rockOutline);
-          // rockGroup.add(child);
         }
-        
-
       });
-      // object.scale.set(0.01, 0.01, 0.01);
-      // object.position.y = 0.01;
-      // scene.add(object);
       object.scale.set(.2, .2, .2);
-      object.position.set(0, -19.5, 100);
-      // object.position.y = 0.01;
+      object.position.set(0, -19, 100);
+      rockGroup.scale.set(.2, .2, .2);
+      rockGroup.position.set(0, -19, 100);
+
       plantScene.add(object);
+      plantScene.add(rockGroup);
     },
     function (xhr) {
       console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -258,8 +275,14 @@ async function waterInit() {
     // const grassMesh = new THREE.Mesh(grassGeo, grassMat);
     const grassMesh = new THREE.Sprite(grassMat);
 
-    const xpos = (Math.random() - 0.5) * 2000;
-    const zpos = (Math.random() - 0.5) * 2000;
+    let xpos = (Math.random() - 0.5) * 2000;
+    let zpos = (Math.random() - 0.5) * 2000;
+
+    while (Math.abs(xpos) < 90 && zpos < 200 && zpos > -20) {
+      xpos = (Math.random() - 0.5) * 2000;
+      zpos = (Math.random() - 0.5) * 2000;
+    }
+
     // sun.position.set(-200, -400, -5000);
     const grassSize = (Math.random() + 1) * 15;
     grassMesh.scale.set(grassSize, grassSize * 0.334170854);
@@ -316,14 +339,14 @@ async function waterInit() {
   treeFolder.add(system, 'lenDecay', 0.1, 1)
     .onChange(() => { drawDefaultTree(trunkMat, flowerMaterial, false); })
     .step(0.01)
-    .name('Length Decay');
+    .name('Growth');
   treeFolder.add(system, 'thickness', 0, 10)
     .onChange(() => { drawDefaultTree(trunkMat, flowerMaterial, false); })
     .name('Thickness');
   treeFolder.add(system, 'thicknessDecay', 0.1, 1)
     .onChange(() => { drawDefaultTree(trunkMat, flowerMaterial, false); })
     .name('Thickness Decay');
-  treeFolder.add(system, 'iterations', 0, 10)
+  treeFolder.add(system, 'iterations', 0, 5)
     .step(1)
     .onChange(() => { drawDefaultTree(trunkMat, flowerMaterial, true); })
     .name('Age');
@@ -401,7 +424,7 @@ function animate() {
 
   // scene.add(causticsMesh);
   scene.add(waterMesh);
-  
+
 
   composer.render(scene, camera);
   // renderer.render(scene);
@@ -433,15 +456,15 @@ function drawDefaultTree(material, leafMat, regenTree) {
   // stem.rotateY(90);
   // stem = new THREE.Line(line_geometry, material, THREE.LinePieces);
   // plantScene.add(stem);
-  const outMat = new THREE.MeshLambertMaterial({ color: 0x000000 , side: THREE.BackSide});
+  const outMat = new THREE.MeshLambertMaterial({ color: 0x000000, side: THREE.BackSide });
   outMat.onBeforeCompile = (shader) => {
     const token = '#include <begin_vertex>'
     const customTransform = `
         vec3 transformed = position + objectNormal*0.4;
     `
-    shader.vertexShader = 
-        shader.vertexShader.replace(token,customTransform)
-}
+    shader.vertexShader =
+      shader.vertexShader.replace(token, customTransform)
+  }
   stemOutline = new THREE.Mesh(line_geometry, outMat);
   // stemOutline.scale.set(1.03, 1.03, 1.03);
   leafGroup = new THREE.Group();
